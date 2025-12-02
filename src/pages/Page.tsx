@@ -2,11 +2,11 @@ import { useNavigate, useSearchParams, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { createDocument, getDocumentById, updateDocument } from '@/firebase/firestoreService'
+import { BtnBold, BtnItalic, BtnLink, BtnRedo, BtnUndo, DefaultEditor, Toolbar } from 'react-simple-wysiwyg'
 
 export default function Page() {
   const navigate = useNavigate()
@@ -27,7 +27,7 @@ export default function Page() {
   // FORM STATES
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState('') // will hold HTML string from editor
 
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -35,7 +35,6 @@ export default function Page() {
   // ------------------------------
   // LOAD DATA
   // ------------------------------
-
   useEffect(() => {
     let mounted = true
 
@@ -92,7 +91,6 @@ export default function Page() {
   // ------------------------------
   // SAVE
   // ------------------------------
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -117,10 +115,20 @@ export default function Page() {
     }
   }
 
+  // handle editor change (supports both event and raw string)
+  const handleEditorChange = (value: any) => {
+    // react-simple-wysiwyg examples sometimes pass an event, sometimes a string.
+    // Support both: if it's an event-like object, read target.value; otherwise treat as string.
+    const newVal =
+      value && typeof value === 'object' && 'target' in value && value.target && 'value' in value.target
+        ? value.target.value
+        : (typeof value === 'string' ? value : (value?.toString?.() ?? ''))
+    setContent(newVal)
+  }
+
   // ------------------------------
   // UI
   // ------------------------------
-
   const titleText = isEdit ? 'Edit Item' : isClone ? 'Clone Item' : 'Create New Item'
   const descText = isEdit
     ? 'Update the details of your existing item.'
@@ -182,16 +190,30 @@ export default function Page() {
                 />
               </div>
 
-              {/* CONTENT */}
-              <div className="space-y-1.5">
+              {/* CONTENT - WYSIWYG */}
+              <div className="space-y-1.5 mb-4">
                 <Label htmlFor="content">Content</Label>
-                <Textarea
-                  id="content"
-                  placeholder="Write the full content here…"
-                  rows={6}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                />
+
+                {/* react-simple-wysiwyg DefaultEditor */}
+                <div id="content" className="prose max-w-full border rounded p-2 bg-white">
+                  <DefaultEditor
+                    value={content}
+                    onChange={handleEditorChange}
+                    placeholder="Write the full content here…"
+                  >
+                    <Toolbar>
+                      <BtnUndo />
+                      <BtnBold />
+                      <BtnItalic />
+                      <BtnLink />
+                      <BtnRedo />
+                    </Toolbar>
+                  </DefaultEditor>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Content is stored as HTML. You can preview it later in a read-only view.
+                </p>
               </div>
 
             </CardContent>
